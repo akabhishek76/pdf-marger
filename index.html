@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Merger | Merge & Edit PDFs Online — Fast & Free</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- PDF.js libraries for PDF rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #6366F1;
+            --dark: #1F2937;
+            --light: #F9FAFB;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .dark-mode {
+            background-color: #111827;
+            color: #F3F4F6;
+        }
+
+        .dark-mode .bg-white {
+            background-color: #1F2937 !important;
+            color: #F3F4F6 !important;
+        }
+
+        .dark-mode .bg-gray-100 {
+            background-color: #374151 !important;
+        }
+
+        .dark-mode .text-gray-800 {
+            color: #F3F4F6 !important;
+        }
+
+        .dark-mode .border-gray-200 {
+            border-color: #4B5563 !important;
+        }
+
+        .file-drop-area {
+            border: 2px dashed #C7D2FE;
+            transition: all 0.3s;
+        }
+
+        .file-drop-area.active {
+            border-color: var(--primary);
+            background-color: #EEF2FF;
+        }
+
+        .dark-mode .file-drop-area {
+            border-color: #4B5563;
+        }
+
+        .dark-mode .file-drop-area.active {
+            border-color: var(--primary-light);
+            background-color: #312E81;
+        }
+
+        .pdf-thumbnail {
+            transition: all 0.3s ease;
+        }
+
+        .pdf-thumbnail:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-preview {
+            width: 60px;
+            height: 85px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            border: 1px solid #E5E7EB;
+        }
+
+        .dark-mode .page-preview {
+            border-color: #4B5563;
+        }
+
+        .rotate-btn {
+            transition: all 0.2s;
+        }
+
+        .rotate-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .progress-bar {
+            height: 6px;
+            transition: width 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 120px;
+            background-color: var(--dark);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .dark-mode .tooltip .tooltip-text {
+            background-color: var(--light);
+            color: var(--dark);
+        }
+
+        /* PDF Content Viewer Styles */
+        .pdf-content-viewer {
+            max-height: 70vh;
+            overflow-y: auto;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.5rem;
+        }
+
+        .pdf-page-container {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #E5E7EB;
+            padding-bottom: 1.5rem;
+        }
+
+        .pdf-page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .pdf-page-content {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .pdf-page-thumbnail {
+            flex: 0 0 120px;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+
+        .pdf-page-text {
+            flex: 1;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.25rem;
+            padding: 0.75rem;
+            background-color: white;
+            min-height: 200px;
+        }
+
+        .pdf-page-text.editable {
+            background-color: #F9FAFB;
+        }
+
+        .search-highlight {
+            background-color: yellow;
+            color: black;
+        }
+
+        .dark-mode .pdf-content-viewer,
+        .dark-mode .pdf-page-container,
+        .dark-mode .pdf-page-thumbnail,
+        .dark-mode .pdf-page-text {
+            border-color: #4B5563;
+        }
+
+        .dark-mode .pdf-page-text {
+            background-color: #1F2937;
+            color: #F3F4F6;
+        }
+
+        .dark-mode .pdf-page-text.editable {
+            background-color: #111827;
+        }
+
+        .dark-mode .search-highlight {
+            background-color: #F59E0B;
+            color: #1F2937;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm py-4 px-6 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center">
+            <i class="fas fa-file-pdf text-3xl text-red-500 mr-3"></i>
+            <h1 class="text-2xl font-bold text-gray-800">PDF Merger</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <a href="#features" class="text-gray-600 hover:text-indigo-600 transition">Features</a>
+            <a href="#how-it-works" class="text-gray-600 hover:text-indigo-600 transition">How It Works</a>
+            <a href="#contact" class="text-gray-600 hover:text-indigo-600 transition">Contact</a>
+            <button id="darkModeToggle" class="p-2 rounded-full hover:bg-gray-100 transition">
+                <i class="fas fa-moon text-gray-600"></i>
+            </button>
+            <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
+                Get Started
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="py-20 px-6 bg-gradient-to-r from-indigo-50 to-purple-50">
+        <div class="max-w-6xl mx-auto text-center">
+            <h1 class="text-5xl font-bold text-gray-800 mb-6">Merge & Edit PDFs Online — Fast & Free</h1>
+            <p class="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">Combine multiple PDF files into a single document
+                in seconds. Reorder pages, delete unwanted content, and customize your merged PDF with our intuitive
+                tool.</p>
+            <button id="startMergingBtn"
+                class="bg-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition transform hover:scale-105 shadow-lg">
+                Start Merging PDFs Now <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+            <div class="mt-10 flex justify-center">
+                <div class="flex items-center space-x-8">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 text-2xl mr-2"></i>
+                        <span class="text-gray-700">No installation needed</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 text-2xl mr-2"></i>
+                        <span class="text-gray-700">Secure & private</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 text-2xl mr-2"></i>
+                        <span class="text-gray-700">Works on any device</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-16 px-6 bg-white">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">Powerful PDF Merging Features</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-gray-50 p-6 rounded-xl hover:shadow-md transition">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-file-upload text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Easy Upload</h3>
+                    <p class="text-gray-600">Drag and drop your PDF files or select them from your device. Supports up
+                        to 3GB total file size.</p>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-xl hover:shadow-md transition">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-edit text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Advanced Editing</h3>
+                    <p class="text-gray-600">Reorder, delete, or rotate pages before merging. Rename files for better
+                        organization.</p>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-xl hover:shadow-md transition">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-cloud-download-alt text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Instant Download</h3>
+                    <p class="text-gray-600">Get your merged PDF in seconds. Option to save to cloud storage or email
+                        the document.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-16 px-6 bg-gray-50">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">How PDF Merger Works</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div
+                        class="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <span class="text-indigo-600 font-bold text-2xl">1</span>
+                    </div>
+                    <h3 class="font-semibold mb-2">Upload PDFs</h3>
+                    <p class="text-gray-600 text-sm">Select or drag and drop your PDF files into the upload area.</p>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <span class="text-indigo-600 font-bold text-2xl">2</span>
+                    </div>
+                    <h3 class="font-semibold mb-2">Edit & Arrange</h3>
+                    <p class="text-gray-600 text-sm">Reorder files and pages, delete content, or rotate pages as needed.
+                    </p>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <span class="text-indigo-600 font-bold text-2xl">3</span>
+                    </div>
+                    <h3 class="font-semibold mb-2">Preview</h3>
+                    <p class="text-gray-600 text-sm">Check the final layout before merging your documents.</p>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <span class="text-indigo-600 font-bold text-2xl">4</span>
+                    </div>
+                    <h3 class="font-semibold mb-2">Merge & Download</h3>
+                    <p class="text-gray-600 text-sm">Combine your PDFs and download the final document instantly.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PDF Merger Tool Section -->
+    <section id="merger-tool" class="py-16 px-6 bg-white hidden">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">PDF Merger Tool</h2>
+                <div class="flex items-center space-x-4">
+                    <button id="backToHomeBtn" class="text-indigo-600 hover:text-indigo-800 transition">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Home
+                    </button>
+                    <button id="newMergeBtn"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition hidden">
+                        <i class="fas fa-plus mr-2"></i> New Merge
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Upload Area -->
+            <div id="uploadSection" class="mb-12">
+                <div id="fileDropArea" class="file-drop-area rounded-xl p-12 text-center cursor-pointer mb-6">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg py-16 px-4">
+                        <i class="fas fa-cloud-upload-alt text-5xl text-indigo-400 mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Drag & Drop PDF Files Here</h3>
+                        <p class="text-gray-500 mb-4">or</p>
+                        <button id="selectFilesBtn"
+                            class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition">
+                            Select PDF Files
+                        </button>
+                        <p class="text-gray-500 mt-4">Supports up to 3GB total file size</p>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" class="hidden" accept=".pdf" multiple>
+
+                <div class="flex justify-between items-center">
+                    <div id="fileSizeIndicator" class="text-sm text-gray-500">
+                        <span id="usedSize">0 MB</span> of <span id="totalSize">3 GB</span> used
+                    </div>
+                    <div id="pageCountIndicator" class="text-sm text-gray-500">
+                        <span id="usedPages">0</span> pages total
+                    </div>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div id="sizeProgressBar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Uploaded Files Section -->
+            <div id="uploadedFilesSection" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Your PDF Files</h3>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <input type="text" id="searchPdfContent" placeholder="Search in PDFs..."
+                                class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        </div>
+                        <button id="viewContentBtn"
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
+                            <i class="fas fa-file-alt mr-2"></i> View Content
+                        </button>
+                    </div>
+                </div>
+
+                <div id="pdfThumbnailsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- PDF thumbnails will be added here dynamically -->
+                </div>
+
+                <!-- Merge Controls -->
+                <div class="bg-gray-50 p-6 rounded-xl mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Final Merge Preview</h3>
+                        <div class="flex items-center space-x-4">
+                            <button id="previewMergeBtn"
+                                class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition">
+                                <i class="fas fa-eye mr-2"></i> Preview
+                            </button>
+                            <button id="mergeBtn"
+                                class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition">
+                                <i class="fas fa-object-group mr-2"></i> Merge PDFs
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="mergePreview" class="border border-gray-200 rounded-lg p-4 min-h-40">
+                        <p class="text-gray-500 text-center py-8">Your merged PDF preview will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF Content Viewer Section -->
+            <div id="pdfContentViewerSection" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">PDF Content Viewer</h3>
+                    <button id="backToThumbnailsBtn" class="text-indigo-600 hover:text-indigo-800 transition">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Files
+                    </button>
+                </div>
+
+                <div class="mb-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <input type="text" id="searchInCurrentPdf" placeholder="Search in this PDF..."
+                                class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        </div>
+                        <button id="toggleEditBtn"
+                            class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition">
+                            <i class="fas fa-edit mr-2"></i> Toggle Edit Mode
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        Showing: <span id="currentPdfName">document.pdf</span>
+                    </div>
+                </div>
+
+                <div id="pdfContentViewer" class="pdf-content-viewer">
+                    <!-- PDF pages content will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Merge Progress Section -->
+            <div id="mergeProgressSection" class="hidden text-center py-12">
+                <div class="max-w-md mx-auto">
+                    <div class="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-cog text-indigo-600 text-3xl animate-spin"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Merging Your PDFs</h3>
+                    <p class="text-gray-600 mb-6">Please wait while we combine your documents...</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="mergeProgressBar" class="bg-indigo-600 h-2.5 rounded-full progress-bar"
+                            style="width: 0%"></div>
+                    </div>
+                    <p id="progressText" class="text-sm text-gray-500 mt-2">0% complete</p>
+                </div>
+            </div>
+
+            <!-- Merge Complete Section -->
+            <div id="mergeCompleteSection" class="hidden text-center py-12">
+                <div class="max-w-md mx-auto">
+                    <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-check text-green-600 text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Merge Complete!</h3>
+                    <p class="text-gray-600 mb-6">Your PDF documents have been successfully merged.</p>
+                    <div class="flex justify-center space-x-4">
+                        <button id="downloadBtn"
+                            class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition">
+                            <i class="fas fa-download mr-2"></i> Download PDF
+                        </button>
+                        <button id="startOverBtn"
+                            class="bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300 transition">
+                            <i class="fas fa-redo mr-2"></i> Start Over
+                        </button>
+                    </div>
+                    <div class="mt-8">
+                        <p class="text-gray-500 mb-2">Other options:</p>
+                        <div class="flex justify-center space-x-3">
+                            <button class="bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition tooltip">
+                                <i class="fas fa-envelope text-gray-600"></i>
+                                <span class="tooltip-text">Email PDF</span>
+                            </button>
+                            <button class="bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition tooltip">
+                                <i class="fab fa-google-drive text-gray-600"></i>
+                                <span class="tooltip-text">Save to Drive</span>
+                            </button>
+                            <button class="bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition tooltip">
+                                <i class="fab fa-dropbox text-gray-600"></i>
+                                <span class="tooltip-text">Save to Dropbox</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-16 px-6 bg-gray-50">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">Contact Us</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Get in Touch</h3>
+                    <p class="text-gray-600 mb-6">Have questions or feedback about our PDF Merger tool? We'd love to
+                        hear from you!</p>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-envelope text-indigo-600 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-medium">Email</h4>
+                                <p class="text-gray-600">support@pdfmerger.com</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-globe text-indigo-600 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-medium">Website</h4>
+                                <p class="text-gray-600">www.pdfmerger.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <form class="bg-white p-6 rounded-xl shadow-sm">
+                        <div class="mb-4">
+                            <label for="name" class="block text-gray-700 mb-2">Name</label>
+                            <input type="text" id="name"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="email" class="block text-gray-700 mb-2">Email</label>
+                            <input type="email" id="email"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="message" class="block text-gray-700 mb-2">Message</label>
+                            <textarea id="message" rows="4"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                        </div>
+                        <button type="submit"
+                            class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition w-full">
+                            Send Message
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white py-8 px-6 border-t border-gray-200">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center mb-4 md:mb-0">
+                    <i class="fas fa-file-pdf text-2xl text-red-500 mr-3"></i>
+                    <span class="text-xl font-bold">PDF Merger</span>
+                </div>
+                <div class="flex space-x-6 mb-4 md:mb-0">
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 transition">Privacy Policy</a>
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 transition">Terms of Service</a>
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 transition">FAQ</a>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 transition">
+                        <i class="fab fa-twitter text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 transition">
+                        <i class="fab fa-facebook text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 transition">
+                        <i class="fab fa-linkedin text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="mt-6 text-center text-gray-500 text-sm">
+                &copy; 2023 PDF Merger. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- PDF Edit Modal -->
+    <div id="pdfEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-4xl max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Edit PDF: <span id="modalPdfName">document.pdf</span></h3>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="mb-4 flex items-center">
+                <label for="renameInput" class="mr-2">Rename:</label>
+                <input type="text" id="renameInput" class="flex-1 px-3 py-1 border border-gray-300 rounded-md">
+                <button id="renameBtn"
+                    class="ml-2 bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 transition">
+                    Save
+                </button>
+            </div>
+
+            <div class="mb-4">
+                <h4 class="font-medium mb-2">Pages:</h4>
+                <div id="pageThumbnailsContainer"
+                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <!-- Page thumbnails will be added here dynamically -->
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="cancelEditBtn"
+                    class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition">
+                    Cancel
+                </button>
+                <button id="saveEditBtn"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-4xl max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Merge Preview</h3>
+                <button id="closePreviewBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="previewContent" class="space-y-4">
+                <!-- Preview content will be added here dynamically -->
+            </div>
+
+            <div class="flex justify-end mt-6">
+                <button id="closePreviewConfirmBtn"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
+                    Close Preview
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set PDF.js worker path
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+
+        // Dark Mode Toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const body = document.body;
+
+        darkModeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            if (body.classList.contains('dark-mode')) {
+                darkModeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                darkModeToggle.innerHTML = '<i class="fas fa-moon text-gray-600"></i>';
+                localStorage.setItem('darkMode', 'disabled');
+            }
+        });
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            body.classList.add('dark-mode');
+            darkModeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+        }
+
+        // Navigation to tool section
+        const startMergingBtn = document.getElementById('startMergingBtn');
+        const backToHomeBtn = document.getElementById('backToHomeBtn');
+        const newMergeBtn = document.getElementById('newMergeBtn');
+        const homeSections = document.querySelectorAll('section:not(#merger-tool)');
+        const mergerToolSection = document.getElementById('merger-tool');
+
+        startMergingBtn.addEventListener('click', () => {
+            homeSections.forEach(section => section.classList.add('hidden'));
+            mergerToolSection.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        });
+
+        backToHomeBtn.addEventListener('click', () => {
+            homeSections.forEach(section => section.classList.remove('hidden'));
+            mergerToolSection.classList.add('hidden');
+            window.scrollTo(0, 0);
+        });
+
+        newMergeBtn.addEventListener('click', () => {
+            resetTool();
+            document.getElementById('uploadSection').classList.remove('hidden');
+            document.getElementById('uploadedFilesSection').classList.add('hidden');
+            document.getElementById('mergeProgressSection').classList.add('hidden');
+            document.getElementById('mergeCompleteSection').classList.add('hidden');
+            window.scrollTo(0, 0);
+        });
+
+        // File Upload Functionality
+        const fileDropArea = document.getElementById('fileDropArea');
+        const fileInput = document.getElementById('fileInput');
+        const selectFilesBtn = document.getElementById('selectFilesBtn');
+        const pdfThumbnailsContainer = document.getElementById('pdfThumbnailsContainer');
+        const uploadedFilesSection = document.getElementById('uploadedFilesSection');
+        const usedSizeElement = document.getElementById('usedSize');
+        const totalSizeElement = document.getElementById('totalSize');
+        const usedPagesElement = document.getElementById('usedPages');
+        const sizeProgressBar = document.getElementById('sizeProgressBar');
+
+        let uploadedFiles = [];
+        const MAX_SIZE = 3 * 1024 * 1024 * 1024; // 3GB in bytes
+
+        // File drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            fileDropArea.classList.add('active');
+        }
+
+        function unhighlight() {
+            fileDropArea.classList.remove('active');
+        }
+
+        fileDropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        selectFilesBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFiles(fileInput.files);
+            }
+        });
+
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+
+            if (validFiles.length === 0) {
+                alert('Please upload PDF files only.');
+                return;
+            }
+
+            // Check total size
+            const newFilesSize = validFiles.reduce((total, file) => total + file.size, 0);
+            const currentTotalSize = uploadedFiles.reduce((total, file) => total + file.size, 0);
+
+            if (currentTotalSize + newFilesSize > MAX_SIZE) {
+                alert('Total file size exceeds 3GB limit. Please upload smaller files.');
+                return;
+            }
+
+            // Process each file
+            validFiles.forEach(file => {
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const pdfData = e.target.result;
+                    const pdfInfo = {
+                        id: Date.now() + Math.random().toString(36).substr(2, 9),
+                        name: file.name,
+                        size: file.size,
+                        data: pdfData,
+                        pages: [], // Will be populated with page thumbnails
+                        pageCount: 0,
+                        rotation: 0,
+                        deletedPages: [],
+                        textContent: {} // Store text content by page number
+                    };
+
+                    // Load PDF to get page count and extract text
+                    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+                    loadingTask.promise.then(pdf => {
+                        pdfInfo.pageCount = pdf.numPages;
+
+                        // Extract text from each page
+                        const textExtractionPromises = [];
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            textExtractionPromises.push(
+                                pdf.getPage(i).then(page => {
+                                    return page.getTextContent().then(textContent => {
+                                        const textItems = textContent.items.map(item => item.str);
+                                        pdfInfo.textContent[i] = textItems.join(' ');
+                                        return i;
+                                    });
+                                })
+                            );
+                        }
+
+                        // Generate thumbnails for each page
+                        Promise.all(textExtractionPromises).then(() => {
+                            // For demo purposes, we'll simulate thumbnails
+                            // In a real app, you'd render actual page thumbnails
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                pdfInfo.pages.push({
+                                    number: i,
+                                    thumbnail: `https://via.placeholder.com/150x200?text=Page+${i}`,
+                                    rotation: 0
+                                });
+                            }
+
+                            uploadedFiles.push(pdfInfo);
+                            updateFileDisplay();
+                        });
+                    });
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function updateFileDisplay() {
+            // Clear previous thumbnails
+            pdfThumbnailsContainer.innerHTML = '';
+
+            // Add new thumbnails
+            uploadedFiles.forEach((file, index) => {
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'pdf-thumbnail bg-white p-4 rounded-lg border border-gray-200 shadow-sm';
+                thumbnail.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center truncate">
+                            <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                            <span class="font-medium truncate" title="${file.name}">${file.name}</span>
+                        </div>
+                        <button class="text-red-500 hover:text-red-700 delete-pdf" data-id="${file.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-500 mb-3">
+                        <span>${fileSizeMB} MB</span>
+                        <span>${file.pageCount} pages</span>
+                    </div>
+                    <div class="flex space-x-2 mb-3 overflow-x-auto pb-2">
+                        ${file.pages.slice(0, 5).map(page => `
+                            <div class="page-preview" style="background-image: url('${page.thumbnail}')"></div>
+                        `).join('')}
+                        ${file.pageCount > 5 ? `<div class="page-preview flex items-center justify-center bg-gray-100 text-gray-500">+${file.pageCount - 5}</div>` : ''}
+                    </div>
+                    <button class="w-full bg-indigo-100 text-indigo-700 py-2 rounded-md hover:bg-indigo-200 transition edit-pdf" data-id="${file.id}">
+                        <i class="fas fa-edit mr-2"></i> Edit PDF
+                    </button>
+                `;
+
+                pdfThumbnailsContainer.appendChild(thumbnail);
+            });
+
+            // Update file size indicators
+            updateSizeIndicators();
+
+            // Show uploaded files section if not already shown
+            if (uploadedFiles.length > 0 && uploadedFilesSection.classList.contains('hidden')) {
+                uploadedFilesSection.classList.remove('hidden');
+            }
+
+            // Add event listeners for edit and delete buttons
+            document.querySelectorAll('.edit-pdf').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const fileId = this.getAttribute('data-id');
+                    openEditModal(fileId);
+                });
+            });
+
+            document.querySelectorAll('.delete-pdf').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const fileId = this.getAttribute('data-id');
+                    deleteFile(fileId);
+                });
+            });
+        }
+
+        function updateSizeIndicators() {
+            const totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
+            const totalPages = uploadedFiles.reduce((sum, file) => sum + file.pageCount, 0);
+
+            // Convert to MB/GB
+            let sizeText;
+            if (totalSize < 1024 * 1024) {
+                sizeText = `${(totalSize / 1024).toFixed(2)} KB`;
+            } else if (totalSize < 1024 * 1024 * 1024) {
+                sizeText = `${(totalSize / (1024 * 1024)).toFixed(2)} MB`;
+            } else {
+                sizeText = `${(totalSize / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+            }
+
+            usedSizeElement.textContent = sizeText;
+            totalSizeElement.textContent = '3 GB';
+            usedPagesElement.textContent = totalPages;
+
+            // Update progress bar
+            const percentage = Math.min(100, (totalSize / MAX_SIZE) * 100);
+            sizeProgressBar.style.width = `${percentage}%`;
+        }
+
+        function deleteFile(fileId) {
+            uploadedFiles = uploadedFiles.filter(file => file.id !== fileId);
+            updateFileDisplay();
+
+            if (uploadedFiles.length === 0) {
+                uploadedFilesSection.classList.add('hidden');
+            }
+        }
+
+        // PDF Content Viewer Functionality
+        const viewContentBtn = document.getElementById('viewContentBtn');
+        const pdfContentViewerSection = document.getElementById('pdfContentViewerSection');
+        const backToThumbnailsBtn = document.getElementById('backToThumbnailsBtn');
+        const pdfContentViewer = document.getElementById('pdfContentViewer');
+        const currentPdfName = document.getElementById('currentPdfName');
+        const toggleEditBtn = document.getElementById('toggleEditBtn');
+        const searchInCurrentPdf = document.getElementById('searchInCurrentPdf');
+        const searchPdfContent = document.getElementById('searchPdfContent');
+
+        let currentViewingFile = null;
+        let editMode = false;
+
+        viewContentBtn.addEventListener('click', () => {
+            if (uploadedFiles.length === 0) return;
+
+            // For demo, we'll show the first PDF's content
+            currentViewingFile = uploadedFiles[0];
+            showPdfContent(currentViewingFile);
+        });
+
+        backToThumbnailsBtn.addEventListener('click', () => {
+            pdfContentViewerSection.classList.add('hidden');
+            uploadedFilesSection.classList.remove('hidden');
+        });
+
+        toggleEditBtn.addEventListener('click', () => {
+            editMode = !editMode;
+            toggleEditBtn.textContent = editMode ? 'Exit Edit Mode' : 'Toggle Edit Mode';
+            toggleEditBtn.classList.toggle('bg-indigo-600', editMode);
+            toggleEditBtn.classList.toggle('text-white', editMode);
+            toggleEditBtn.classList.toggle('bg-gray-200', !editMode);
+            toggleEditBtn.classList.toggle('text-gray-700', !editMode);
+
+            // Toggle editable state of text content
+            const textElements = pdfContentViewer.querySelectorAll('.pdf-page-text');
+            textElements.forEach(el => {
+                el.contentEditable = editMode;
+                el.classList.toggle('editable', editMode);
+            });
+        });
+
+        searchInCurrentPdf.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim().toLowerCase();
+            if (searchTerm.length === 0) {
+                clearHighlights();
+                return;
+            }
+
+            highlightText(searchTerm);
+        });
+
+        searchPdfContent.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.trim().toLowerCase();
+            if (searchTerm.length === 0) return;
+
+            // Search across all PDFs (would be implemented in a real app)
+            console.log(`Searching for: ${searchTerm} across all PDFs`);
+        });
+
+        function showPdfContent(pdfFile) {
+            currentPdfName.textContent = pdfFile.name;
+            pdfContentViewer.innerHTML = '';
+
+            // Display each page's content
+            for (let i = 1; i <= pdfFile.pageCount; i++) {
+                if (pdfFile.deletedPages.includes(i)) continue;
+
+                const pageContainer = document.createElement('div');
+                pageContainer.className = 'pdf-page-container';
+
+                const pageHeader = document.createElement('div');
+                pageHeader.className = 'pdf-page-header';
+                pageHeader.innerHTML = `
+                    <h4 class="font-medium">Page ${i}</h4>
+                    <div class="flex space-x-2">
+                        <button class="text-indigo-600 hover:text-indigo-800 move-page-up" data-page="${i}">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button class="text-indigo-600 hover:text-indigo-800 move-page-down" data-page="${i}">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                        <button class="text-red-500 hover:text-red-700 delete-page" data-page="${i}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                const pageContent = document.createElement('div');
+                pageContent.className = 'pdf-page-content';
+
+                const thumbnailDiv = document.createElement('div');
+                thumbnailDiv.className = 'pdf-page-thumbnail';
+                thumbnailDiv.innerHTML = `<img src="https://via.placeholder.com/120x170?text=Page+${i}" alt="Page ${i}" class="w-full h-full object-contain">`;
+
+                const textDiv = document.createElement('div');
+                textDiv.className = 'pdf-page-text';
+                textDiv.textContent = pdfFile.textContent[i] || `Text content for page ${i} would appear here.`;
+
+                pageContent.appendChild(thumbnailDiv);
+                pageContent.appendChild(textDiv);
+
+                pageContainer.appendChild(pageHeader);
+                pageContainer.appendChild(pageContent);
+                pdfContentViewer.appendChild(pageContainer);
+            }
+
+            // Add event listeners for page operations
+            pdfContentViewer.addEventListener('click', (e) => {
+                const pageNum = parseInt(e.target.closest('button')?.getAttribute('data-page'));
+                if (!pageNum) return;
+
+                if (e.target.closest('.move-page-up')) {
+                    movePageUp(pdfFile, pageNum);
+                } else if (e.target.closest('.move-page-down')) {
+                    movePageDown(pdfFile, pageNum);
+                } else if (e.target.closest('.delete-page')) {
+                    deletePage(pdfFile, pageNum);
+                }
+            });
+
+            // Show the content viewer
+            uploadedFilesSection.classList.add('hidden');
+            pdfContentViewerSection.classList.remove('hidden');
+        }
+
+        function movePageUp(pdfFile, pageNum) {
+            // In a real app, this would reorder the pages in the PDF
+            alert(`Would move page ${pageNum} up in the PDF`);
+        }
+
+        function movePageDown(pdfFile, pageNum) {
+            // In a real app, this would reorder the pages in the PDF
+            alert(`Would move page ${pageNum} down in the PDF`);
+        }
+
+        function deletePage(pdfFile, pageNum) {
+            if (!pdfFile.deletedPages.includes(pageNum)) {
+                pdfFile.deletedPages.push(pageNum);
+                showPdfContent(pdfFile);
+                updateFileDisplay();
+            }
+        }
+
+        function highlightText(searchTerm) {
+            clearHighlights();
+
+            const textElements = pdfContentViewer.querySelectorAll('.pdf-page-text');
+            textElements.forEach(el => {
+                const text = el.textContent;
+                const regex = new RegExp(searchTerm, 'gi');
+                const highlightedText = text.replace(regex, match =>
+                    `<span class="search-highlight">${match}</span>`
+                );
+                el.innerHTML = highlightedText;
+            });
+        }
+
+        function clearHighlights() {
+            const highlights = pdfContentViewer.querySelectorAll('.search-highlight');
+            highlights.forEach(hl => {
+                const parent = hl.parentNode;
+                parent.replaceChild(document.createTextNode(hl.textContent), hl);
+                parent.normalize();
+            });
+        }
+
+        // PDF Edit Modal
+        const pdfEditModal = document.getElementById('pdfEditModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const renameInput = document.getElementById('renameInput');
+        const renameBtn = document.getElementById('renameBtn');
+        const pageThumbnailsContainer = document.getElementById('pageThumbnailsContainer');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const saveEditBtn = document.getElementById('saveEditBtn');
+
+        let currentEditingFile = null;
+
+        function openEditModal(fileId) {
+            currentEditingFile = uploadedFiles.find(file => file.id === fileId);
+            if (!currentEditingFile) return;
+
+            // Set modal title and rename input
+            document.getElementById('modalPdfName').textContent = currentEditingFile.name;
+            renameInput.value = currentEditingFile.name;
+
+            // Populate page thumbnails
+            pageThumbnailsContainer.innerHTML = '';
+            currentEditingFile.pages.forEach((page, index) => {
+                if (currentEditingFile.deletedPages.includes(page.number)) return;
+
+                const pageElement = document.createElement('div');
+                pageElement.className = 'relative group';
+                pageElement.innerHTML = `
+                    <div class="page-preview mx-auto mb-2" style="background-image: url('${page.thumbnail}'); transform: rotate(${page.rotation}deg)"></div>
+                    <div class="text-center text-sm mb-2">Page ${page.number}</div>
+                    <div class="flex justify-center space-x-1">
+                        <button class="rotate-btn text-indigo-600 rotate-left" data-page="${page.number}" title="Rotate left">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button class="rotate-btn text-indigo-600 rotate-right" data-page="${page.number}" title="Rotate right">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="rotate-btn text-red-500 delete-page" data-page="${page.number}" title="Delete page">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                pageThumbnailsContainer.appendChild(pageElement);
+            });
+
+            // Show modal
+            pdfEditModal.classList.remove('hidden');
+        }
+
+        closeModalBtn.addEventListener('click', () => {
+            pdfEditModal.classList.add('hidden');
+        });
+
+        cancelEditBtn.addEventListener('click', () => {
+            pdfEditModal.classList.add('hidden');
+        });
+
+        renameBtn.addEventListener('click', () => {
+            const newName = renameInput.value.trim();
+            if (newName && currentEditingFile) {
+                currentEditingFile.name = newName;
+                document.getElementById('modalPdfName').textContent = newName;
+            }
+        });
+
+        // Handle page operations
+        pageThumbnailsContainer.addEventListener('click', (e) => {
+            if (!currentEditingFile) return;
+
+            const pageNumber = parseInt(e.target.closest('button')?.getAttribute('data-page'));
+            if (!pageNumber) return;
+
+            const page = currentEditingFile.pages.find(p => p.number === pageNumber);
+            if (!page) return;
+
+            // Rotate left
+            if (e.target.closest('.rotate-left')) {
+                page.rotation = (page.rotation - 90) % 360;
+                openEditModal(currentEditingFile.id); // Refresh view
+            }
+
+            // Rotate right
+            if (e.target.closest('.rotate-right')) {
+                page.rotation = (page.rotation + 90) % 360;
+                openEditModal(currentEditingFile.id); // Refresh view
+            }
+
+            // Delete page
+            if (e.target.closest('.delete-page')) {
+                if (!currentEditingFile.deletedPages.includes(pageNumber)) {
+                    currentEditingFile.deletedPages.push(pageNumber);
+                    openEditModal(currentEditingFile.id); // Refresh view
+                }
+            }
+        });
+
+        saveEditBtn.addEventListener('click', () => {
+            pdfEditModal.classList.add('hidden');
+            updateFileDisplay();
+        });
+
+        // Merge functionality
+        const mergeBtn = document.getElementById('mergeBtn');
+        const previewMergeBtn = document.getElementById('previewMergeBtn');
+        const mergeProgressSection = document.getElementById('mergeProgressSection');
+        const mergeCompleteSection = document.getElementById('mergeCompleteSection');
+        const mergeProgressBar = document.getElementById('mergeProgressBar');
+        const progressText = document.getElementById('progressText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const startOverBtn = document.getElementById('startOverBtn');
+        const previewModalElement = document.getElementById('previewModal');
+        const closePreviewBtn = document.getElementById('closePreviewBtn');
+        const closePreviewConfirmBtn = document.getElementById('closePreviewConfirmBtn');
+        const previewContent = document.getElementById('previewContent');
+
+        mergeBtn.addEventListener('click', () => {
+            if (uploadedFiles.length === 0) return;
+
+            uploadedFilesSection.classList.add('hidden');
+            mergeProgressSection.classList.remove('hidden');
+
+            // Simulate merge progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+
+                    // Show completion after a short delay
+                    setTimeout(() => {
+                        mergeProgressSection.classList.add('hidden');
+                        mergeCompleteSection.classList.remove('hidden');
+                        newMergeBtn.classList.remove('hidden');
+                    }, 500);
+                }
+
+                mergeProgressBar.style.width = `${progress}%`;
+                progressText.textContent = `${Math.floor(progress)}% complete`;
+            }, 300);
+        });
+
+        previewMergeBtn.addEventListener('click', () => {
+            if (uploadedFiles.length === 0) return;
+
+            // Generate preview content
+            previewContent.innerHTML = '';
+
+            uploadedFiles.forEach(file => {
+                const fileSection = document.createElement('div');
+                fileSection.className = 'bg-gray-50 p-4 rounded-lg';
+
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-center mb-3';
+                header.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                        <span class="font-medium">${file.name}</span>
+                    </div>
+                    <span class="text-sm text-gray-500">${file.pageCount - file.deletedPages.length} pages</span>
+                `;
+
+                const pagesContainer = document.createElement('div');
+                pagesContainer.className = 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2';
+
+                file.pages.forEach(page => {
+                    if (!file.deletedPages.includes(page.number)) {
+                        const pageElement = document.createElement('div');
+                        pageElement.className = 'text-center';
+                        pageElement.innerHTML = `
+                            <div class="page-preview mx-auto" style="background-image: url('${page.thumbnail}'); transform: rotate(${page.rotation}deg)"></div>
+                            <div class="text-xs mt-1">Page ${page.number}</div>
+                        `;
+                        pagesContainer.appendChild(pageElement);
+                    }
+                });
+
+                fileSection.appendChild(header);
+                fileSection.appendChild(pagesContainer);
+                previewContent.appendChild(fileSection);
+            });
+
+            previewModalElement.classList.remove('hidden');
+        });
+
+        closePreviewBtn.addEventListener('click', () => {
+            previewModalElement.classList.add('hidden');
+        });
+
+        closePreviewConfirmBtn.addEventListener('click', () => {
+            previewModalElement.classList.add('hidden');
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            // In a real app, this would download the merged PDF
+            // For demo, we'll simulate it
+            alert('Downloading merged PDF...');
+        });
+
+        startOverBtn.addEventListener('click', () => {
+            resetTool();
+            document.getElementById('uploadSection').classList.remove('hidden');
+            document.getElementById('uploadedFilesSection').classList.add('hidden');
+            document.getElementById('mergeProgressSection').classList.add('hidden');
+            document.getElementById('mergeCompleteSection').classList.add('hidden');
+        });
+
+        function resetTool() {
+            uploadedFiles = [];
+            pdfThumbnailsContainer.innerHTML = '';
+            usedSizeElement.textContent = '0 MB';
+            usedPagesElement.textContent = '0';
+            sizeProgressBar.style.width = '0%';
+            newMergeBtn.classList.add('hidden');
+        }
+
+        // Initialize
+        updateSizeIndicators();
+    </script>
+</body>
+
+</html>
